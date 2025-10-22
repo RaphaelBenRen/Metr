@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm init -y)",
+      "Bash(npm install)",
+      "Bash(npm install:*)",
+      "Bash(npm run dev)",
+      "Bash(npm uninstall:*)",
+      "Bash(curl -s http://localhost/metr2/backend/test_db.php)",
+      "Bash(curl -X POST http://localhost/metr2/backend/api/projects/create.php -H \"Content-Type: application/json\" -d \"{\"\"nom_projet\"\":\"\"Test curl\"\",\"\"client\"\":\"\"Test client\"\",\"\"typologie\"\":\"\"Maison individuelle\"\"}\" -c cookies.txt -b cookies.txt -v)",
+      "Bash(php:*)",
+      "Bash(curl:*)",
+      "Bash(cat:*)",
+      "Bash(timeout:*)",
+      "Bash(exit 0)",
+      "Bash(git reset:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
