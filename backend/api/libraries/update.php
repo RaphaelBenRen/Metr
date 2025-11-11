@@ -27,20 +27,34 @@ try {
     $userId = getCurrentUserId();
     $libraryId = $input['id'];
 
-    // Vérifier que la bibliothèque appartient à l'utilisateur
-    $query = "SELECT * FROM libraries WHERE id = :id AND user_id = :user_id LIMIT 1";
+    // Vérifier que l'utilisateur a accès à la bibliothèque avec droits d'édition
+    $query = "SELECT l.*,
+              CASE WHEN l.user_id = :user_id THEN 1 ELSE 0 END as is_owner,
+              ls.role as shared_role
+              FROM libraries l
+              LEFT JOIN library_shares ls ON l.id = ls.library_id AND ls.shared_with_user_id = :user_id
+              WHERE l.id = :id AND (l.user_id = :user_id OR ls.shared_with_user_id = :user_id)
+              LIMIT 1";
     $stmt = $db->prepare($query);
     $stmt->bindParam(':id', $libraryId);
     $stmt->bindParam(':user_id', $userId);
     $stmt->execute();
 
-    if ($stmt->rowCount() === 0) {
+    $library = $stmt->fetch();
+
+    if (!$library) {
         jsonError('Bibliothèque non trouvée ou accès non autorisé', 404);
+    }
+
+    // Vérifier les droits d'édition
+    $canEdit = $library['is_owner'] || ($library['shared_role'] === 'editor');
+    if (!$canEdit) {
+        jsonError('Vous n\'avez pas les droits pour modifier cette bibliothèque', 403);
     }
 
     // Construire la requête de mise à jour
     $fields = [];
-    $params = [':id' => $libraryId, ':user_id' => $userId];
+    $params = [':id' => $libraryId];
 
     if (isset($input['nom'])) {
         $fields[] = 'nom = :nom';
@@ -59,7 +73,7 @@ try {
         jsonError('Aucune donnée à mettre à jour');
     }
 
-    $query = "UPDATE libraries SET " . implode(', ', $fields) . " WHERE id = :id AND user_id = :user_id";
+    $query = "UPDATE libraries SET " . implode(', ', $fields) . " WHERE id = :id";
     $stmt = $db->prepare($query);
 
     foreach ($params as $key => $value) {

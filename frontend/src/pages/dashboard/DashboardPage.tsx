@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { projectsApi, statisticsApi } from '@/services/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Plus, FolderOpen, TrendingUp, FileDown, Archive } from 'lucide-react'
+import { Plus, FolderOpen, FileDown, Archive, FileText } from 'lucide-react'
 import type { Project, Statistics } from '@/types'
 
 export function DashboardPage() {
@@ -101,33 +101,25 @@ export function DashboardPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {recentProjects.map((project) => (
-              <Card key={project.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <CardTitle className="text-lg">{project.nom_projet}</CardTitle>
-                  <p className="text-sm text-gray-600">{project.client}</p>
-                  <p className="text-xs text-gray-500">Créé le {formatDate(project.created_at)}</p>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(project.statut)}`}>
+              <Card
+                key={project.id}
+                className="hover:shadow-lg transition-shadow cursor-pointer"
+                onClick={() => navigate({
+                  to: `/projects/${project.id}`,
+                  search: { from: 'dashboard' }
+                })}
+              >
+                <CardContent className="p-6">
+                  <div className="flex justify-center mb-4">
+                    <FileText className="w-20 h-20 text-primary" strokeWidth={1.5} />
+                  </div>
+
+                  <h3 className="font-semibold text-lg mb-1 truncate text-center">{project.nom_projet}</h3>
+                  <p className="text-sm text-gray-600 mb-2 text-center">{project.client}</p>
+                  <div className="flex items-center justify-center">
+                    <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(project.statut)}`}>
                       {project.statut}
                     </span>
-                    <div className="flex space-x-2">
-                      <Button
-                        size="sm"
-                        className="flex-1"
-                        onClick={() => navigate({ to: `/projects/${project.id}` })}
-                      >
-                        Ouvrir
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="flex-1"
-                      >
-                        Exporter
-                      </Button>
-                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -139,7 +131,7 @@ export function DashboardPage() {
       {/* STATISTIQUES Section */}
       <div>
         <h2 className="text-2xl font-bold font-heading text-primary mb-6">STATISTIQUES</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
@@ -151,22 +143,6 @@ export function DashboardPage() {
                 </div>
                 <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
                   <FolderOpen className="w-6 h-6 text-green-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">m² mesurés ce mois</p>
-                  <p className="text-3xl font-bold text-gray-900">
-                    {stats?.surface_mesuree || 0}
-                  </p>
-                </div>
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <TrendingUp className="w-6 h-6 text-blue-600" />
                 </div>
               </div>
             </CardContent>

@@ -27,17 +27,40 @@ try {
     $userId = getCurrentUserId();
     $articleId = $input['id'];
 
-    // Vérifier que l'article appartient à une bibliothèque de l'utilisateur
-    $query = "SELECT a.* FROM articles a
+    // Vérifier que l'article appartient à une bibliothèque accessible avec droits d'édition
+    $query = "SELECT a.*,
+              CASE WHEN l.user_id = :user_id THEN 1 ELSE 0 END as is_owner,
+              ls.role as library_shared_role,
+              ps.role as project_shared_role
+              FROM articles a
               INNER JOIN libraries l ON a.library_id = l.id
-              WHERE a.id = :id AND l.user_id = :user_id LIMIT 1";
+              LEFT JOIN library_shares ls ON l.id = ls.library_id AND ls.shared_with_user_id = :user_id
+              LEFT JOIN project_libraries pl ON l.id = pl.library_id
+              LEFT JOIN project_shares ps ON pl.project_id = ps.project_id AND ps.shared_with_user_id = :user_id2
+              WHERE a.id = :id
+              AND (l.user_id = :user_id3
+                   OR ls.shared_with_user_id = :user_id3
+                   OR ps.shared_with_user_id = :user_id2)
+              LIMIT 1";
     $stmt = $db->prepare($query);
     $stmt->bindParam(':id', $articleId);
     $stmt->bindParam(':user_id', $userId);
+    $stmt->bindParam(':user_id2', $userId);
+    $stmt->bindParam(':user_id3', $userId);
     $stmt->execute();
 
-    if ($stmt->rowCount() === 0) {
+    $article = $stmt->fetch();
+
+    if (!$article) {
         jsonError('Article non trouvé ou accès non autorisé', 404);
+    }
+
+    // Vérifier les droits d'édition
+    $canEdit = $article['is_owner']
+               || ($article['library_shared_role'] === 'editor')
+               || ($article['project_shared_role'] === 'editor');
+    if (!$canEdit) {
+        jsonError('Vous n\'avez pas les droits pour modifier cet article', 403);
     }
 
     // Construire la requête de mise à jour

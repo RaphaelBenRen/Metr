@@ -3,9 +3,10 @@ import { useNavigate, useParams } from '@tanstack/react-router'
 import { projectsApi } from '@/services/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { ArrowLeft, FileText, Download, Trash2, Upload, FileImage, FileSpreadsheet, Edit, Folder, Plus, X } from 'lucide-react'
+import { ArrowLeft, FileText, Download, Trash2, Upload, FileImage, FileSpreadsheet, Edit, Folder, Plus, X, Users, LogOut, Calculator } from 'lucide-react'
 import type { Project, Library } from '@/types'
 import { AssignLibrariesModal } from '@/components/modals/AssignLibrariesModal'
+import { ShareModal } from '@/components/modals/ShareModal'
 
 interface Document {
   id: number
@@ -27,7 +28,22 @@ export function ProjectDetailPage() {
     return match ? parseInt(match[1]) : null
   }
 
+  // Get navigation source from URL search params
+  const getFromSource = () => {
+    const params = new URLSearchParams(window.location.search)
+    const from = params.get('from')
+    const fromFolder = params.get('from_folder')
+
+    if (from === 'dashboard') {
+      return { type: 'dashboard' as const }
+    } else if (fromFolder) {
+      return { type: 'folder' as const, folderId: parseInt(fromFolder) }
+    }
+    return { type: 'projects' as const }
+  }
+
   const projectId = getProjectIdFromUrl()
+  const fromSource = getFromSource()
 
   const [project, setProject] = useState<Project | null>(null)
   const [documents, setDocuments] = useState<Document[]>([])
@@ -35,6 +51,7 @@ export function ProjectDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [assignLibrariesModalOpen, setAssignLibrariesModalOpen] = useState(false)
+  const [shareModalOpen, setShareModalOpen] = useState(false)
 
   useEffect(() => {
     if (projectId) {
@@ -108,6 +125,29 @@ export function ProjectDetailPage() {
     } catch (error) {
       console.error('Error deleting document:', error)
       alert('Erreur lors de la suppression')
+    }
+  }
+
+  const handleLeaveProject = async () => {
+    if (!projectId) return
+    if (!confirm('Êtes-vous sûr de vouloir quitter ce projet ? Vous perdrez l\'accès à tous les documents et données du projet.')) return
+
+    try {
+      const response = await projectsApi.leave(projectId)
+      if (response.success) {
+        if (fromSource.type === 'dashboard') {
+          navigate({ to: '/dashboard' })
+        } else if (fromSource.type === 'folder') {
+          navigate({ to: '/projects', search: { folder: fromSource.folderId } })
+        } else {
+          navigate({ to: '/projects' })
+        }
+      } else {
+        alert(response.error || 'Erreur lors de la sortie du projet')
+      }
+    } catch (error) {
+      console.error('Error leaving project:', error)
+      alert('Erreur lors de la sortie du projet')
     }
   }
 
@@ -240,7 +280,15 @@ export function ProjectDetailPage() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate({ to: '/projects' })}
+            onClick={() => {
+              if (fromSource.type === 'dashboard') {
+                navigate({ to: '/dashboard' })
+              } else if (fromSource.type === 'folder') {
+                navigate({ to: '/projects', search: { folder: fromSource.folderId } })
+              } else {
+                navigate({ to: '/projects' })
+              }
+            }}
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Retour
@@ -255,11 +303,60 @@ export function ProjectDetailPage() {
         <div className="flex items-center gap-3">
           <Button
             variant="outline"
-            onClick={() => navigate({ to: `/projects/${projectId}/edit` })}
+            onClick={() => {
+              const search: any = {}
+              if (fromSource.type === 'dashboard') {
+                search.from = 'dashboard'
+              } else if (fromSource.type === 'folder') {
+                search.from_folder = fromSource.folderId
+              }
+              navigate({
+                to: `/projects/${projectId}/chiffrage`,
+                search: Object.keys(search).length > 0 ? search : undefined
+              })
+            }}
           >
-            <Edit className="w-4 h-4 mr-2" />
-            Modifier
+            <Calculator className="w-4 h-4 mr-2" />
+            Chiffrage
           </Button>
+          {project.is_owner ? (
+            <>
+              <Button
+                variant="outline"
+                onClick={() => setShareModalOpen(true)}
+              >
+                <Users className="w-4 h-4 mr-2" />
+                Partager
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => navigate({ to: `/projects/${projectId}/edit` })}
+              >
+                <Edit className="w-4 h-4 mr-2" />
+                Modifier
+              </Button>
+            </>
+          ) : (
+            <>
+              {project.shared_role === 'editor' && (
+                <Button
+                  variant="outline"
+                  onClick={() => navigate({ to: `/projects/${projectId}/edit` })}
+                >
+                  <Edit className="w-4 h-4 mr-2" />
+                  Modifier
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                onClick={handleLeaveProject}
+                className="text-red-600 hover:text-red-700 hover:border-red-600"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Quitter le projet
+              </Button>
+            </>
+          )}
           <span className={`inline-block px-4 py-2 rounded-full text-sm font-medium ${getStatusColor(project.statut)}`}>
             {project.statut}
           </span>
@@ -522,6 +619,18 @@ export function ProjectDetailPage() {
           onOpenChange={setAssignLibrariesModalOpen}
           projectId={projectId!}
           projectName={project.nom_projet}
+          onSuccess={loadProjectData}
+        />
+      )}
+
+      {/* Share Modal */}
+      {project && (
+        <ShareModal
+          open={shareModalOpen}
+          onOpenChange={setShareModalOpen}
+          type="project"
+          itemId={projectId!}
+          itemName={project.nom_projet}
           onSuccess={loadProjectData}
         />
       )}

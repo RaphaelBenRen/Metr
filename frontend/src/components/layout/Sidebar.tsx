@@ -64,7 +64,7 @@ export function Sidebar() {
           alt="Metr."
           className={cn(
             "transition-all duration-300",
-            isCollapsed ? "h-8" : "h-10"
+            isCollapsed ? "h-5" : "h-6"
           )}
         />
       </div>

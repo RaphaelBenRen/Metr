@@ -25,8 +25,12 @@ try {
     $userId = getCurrentUserId();
     $projectId = $_GET['project_id'];
 
-    // Vérifier que le projet appartient à l'utilisateur
-    $query = "SELECT id FROM projects WHERE id = :id AND user_id = :user_id LIMIT 1";
+    // Vérifier que l'utilisateur a accès au projet (propriétaire ou partagé)
+    $query = "SELECT p.id
+              FROM projects p
+              LEFT JOIN project_shares ps ON p.id = ps.project_id AND ps.shared_with_user_id = :user_id
+              WHERE p.id = :id AND (p.user_id = :user_id OR ps.shared_with_user_id = :user_id)
+              LIMIT 1";
     $stmt = $db->prepare($query);
     $stmt->bindParam(':id', $projectId);
     $stmt->bindParam(':user_id', $userId);

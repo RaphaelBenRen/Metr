@@ -36,11 +36,34 @@ try {
     $date_livraison_prevue = (!empty($input['date_livraison_prevue']) && $input['date_livraison_prevue'] !== '') ? $input['date_livraison_prevue'] : null;
     $statut = $input['statut'] ?? 'Brouillon';
 
-    $query = "INSERT INTO projects (user_id, nom_projet, client, reference_interne, typologie, phase, adresse, date_livraison_prevue, statut)
-              VALUES (:user_id, :nom_projet, :client, :reference_interne, :typologie, :phase, :adresse, :date_livraison_prevue, :statut)";
+    // Auto-assign folder based on status or use provided folder_id
+    $folder_id = $input['folder_id'] ?? null;
+
+    if ($folder_id === null) {
+        // If no folder_id provided, auto-assign based on status
+        if ($statut === 'Archivé') {
+            // Get "Archivés" folder
+            $folderQuery = "SELECT id FROM project_folders WHERE user_id = :user_id AND nom = 'Archivés' AND is_system = 1 LIMIT 1";
+            $folderStmt = $db->prepare($folderQuery);
+            $folderStmt->bindParam(':user_id', $userId);
+            $folderStmt->execute();
+            $folder_id = $folderStmt->fetchColumn();
+        } else {
+            // Get "Mes projets" folder
+            $folderQuery = "SELECT id FROM project_folders WHERE user_id = :user_id AND nom = 'Mes projets' AND is_system = 1 LIMIT 1";
+            $folderStmt = $db->prepare($folderQuery);
+            $folderStmt->bindParam(':user_id', $userId);
+            $folderStmt->execute();
+            $folder_id = $folderStmt->fetchColumn();
+        }
+    }
+
+    $query = "INSERT INTO projects (user_id, folder_id, nom_projet, client, reference_interne, typologie, phase, adresse, date_livraison_prevue, statut)
+              VALUES (:user_id, :folder_id, :nom_projet, :client, :reference_interne, :typologie, :phase, :adresse, :date_livraison_prevue, :statut)";
 
     $stmt = $db->prepare($query);
     $stmt->bindParam(':user_id', $userId);
+    $stmt->bindParam(':folder_id', $folder_id);
     $stmt->bindParam(':nom_projet', $nom_projet);
     $stmt->bindParam(':client', $client);
     $stmt->bindParam(':reference_interne', $reference_interne);

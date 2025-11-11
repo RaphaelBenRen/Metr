@@ -28,15 +28,29 @@ try {
     $projectId = $data['project_id'];
     $libraryId = $data['library_id'];
 
-    // Vérifier que le projet appartient à l'utilisateur
-    $query = "SELECT id FROM projects WHERE id = :id AND user_id = :user_id LIMIT 1";
+    // Vérifier que l'utilisateur a accès au projet avec droits d'édition
+    $query = "SELECT p.id,
+              CASE WHEN p.user_id = :user_id THEN 1 ELSE 0 END as is_owner,
+              ps.role as shared_role
+              FROM projects p
+              LEFT JOIN project_shares ps ON p.id = ps.project_id AND ps.shared_with_user_id = :user_id
+              WHERE p.id = :id AND (p.user_id = :user_id OR ps.shared_with_user_id = :user_id)
+              LIMIT 1";
     $stmt = $db->prepare($query);
     $stmt->bindParam(':id', $projectId);
     $stmt->bindParam(':user_id', $userId);
     $stmt->execute();
 
-    if ($stmt->rowCount() === 0) {
+    $project = $stmt->fetch();
+
+    if (!$project) {
         jsonError('Projet non trouvé ou accès non autorisé', 404);
+    }
+
+    // Vérifier les droits d'édition
+    $canEdit = $project['is_owner'] || ($project['shared_role'] === 'editor');
+    if (!$canEdit) {
+        jsonError('Vous n\'avez pas les droits pour modifier ce projet', 403);
     }
 
     // Retirer l'assignation

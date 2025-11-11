@@ -163,6 +163,39 @@ export const projectsApi = {
     })
   },
 
+  // Project Sharing
+  share: async (projectId: number, email: string, role: 'viewer' | 'editor' = 'editor') => {
+    return request('/projects/share.php', {
+      method: 'POST',
+      body: JSON.stringify({ project_id: projectId, email, role }),
+    })
+  },
+
+  unshare: async (projectId: number, userId: number) => {
+    return request('/projects/unshare.php', {
+      method: 'POST',
+      body: JSON.stringify({ project_id: projectId, user_id: userId }),
+    })
+  },
+
+  getSharedUsers: async (projectId: number) => {
+    return request(`/projects/shared_users.php?project_id=${projectId}`)
+  },
+
+  leave: async (projectId: number) => {
+    return request('/projects/leave.php', {
+      method: 'POST',
+      body: JSON.stringify({ project_id: projectId }),
+    })
+  },
+
+  updateRole: async (projectId: number, userId: number, role: 'viewer' | 'editor') => {
+    return request('/projects/update_role.php', {
+      method: 'POST',
+      body: JSON.stringify({ project_id: projectId, user_id: userId, role }),
+    })
+  },
+
   // Documents
   uploadDocument: async (projectId: number, type: 'plan' | 'document', file: File) => {
     const formData = new FormData()
@@ -227,6 +260,32 @@ export const librariesApi = {
   // Library Projects
   getProjects: async (libraryId: number) => {
     return request(`/libraries/projects.php?library_id=${libraryId}`)
+  },
+
+  // Library Sharing
+  share: async (libraryId: number, email: string, role: 'viewer' | 'editor' = 'editor') => {
+    return request('/libraries/share.php', {
+      method: 'POST',
+      body: JSON.stringify({ library_id: libraryId, email, role }),
+    })
+  },
+
+  unshare: async (libraryId: number, userId: number) => {
+    return request('/libraries/unshare.php', {
+      method: 'POST',
+      body: JSON.stringify({ library_id: libraryId, user_id: userId }),
+    })
+  },
+
+  getSharedUsers: async (libraryId: number) => {
+    return request(`/libraries/shared_users.php?library_id=${libraryId}`)
+  },
+
+  updateRole: async (libraryId: number, userId: number, role: 'viewer' | 'editor') => {
+    return request('/libraries/update_role.php', {
+      method: 'POST',
+      body: JSON.stringify({ library_id: libraryId, user_id: userId, role }),
+    })
   },
 }
 
@@ -365,3 +424,62 @@ export const chiffrageApi = {
 
 // Backward compatibility alias
 export const devisApi = chiffrageApi
+
+/**
+ * Project Folders API
+ */
+export const foldersApi = {
+  list: async () => {
+    return request('/folders/list.php')
+  },
+
+  create: async (data: { nom: string; parent_folder_id?: number | null; couleur?: string; position?: number }) => {
+    return request('/folders/create.php', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  },
+
+  update: async (id: number, data: Partial<{ nom: string; parent_folder_id?: number | null; couleur?: string; position?: number }>) => {
+    return request('/folders/update.php', {
+      method: 'PUT',
+      body: JSON.stringify({ id, ...data }),
+    })
+  },
+
+  delete: async (id: number) => {
+    return request(`/folders/delete.php?id=${id}`, {
+      method: 'DELETE',
+    })
+  },
+
+  moveProject: async (projectId: number, folderId: number | null) => {
+    return request('/projects/move_to_folder.php', {
+      method: 'PUT',
+      body: JSON.stringify({ project_id: projectId, folder_id: folderId }),
+    })
+  },
+}
+
+/**
+ * Notifications API
+ */
+export const notificationsApi = {
+  getPendingShares: async () => {
+    return request('/notifications/pending_shares.php')
+  },
+
+  acceptShare: async (shareId: number) => {
+    return request('/notifications/accept_share.php', {
+      method: 'POST',
+      body: JSON.stringify({ share_id: shareId }),
+    })
+  },
+
+  rejectShare: async (shareId: number) => {
+    return request('/notifications/reject_share.php', {
+      method: 'POST',
+      body: JSON.stringify({ share_id: shareId }),
+    })
+  },
+}

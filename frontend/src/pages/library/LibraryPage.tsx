@@ -4,12 +4,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Plus, Search, Upload, Settings, Edit, Trash2, MoreVertical, Filter, CheckSquare, X, FolderInput, ChevronDown, Download, Folder, ArrowLeft, FolderKanban } from 'lucide-react'
+import { Plus, Search, Upload, Settings, Edit, Trash2, MoreVertical, Filter, CheckSquare, X, FolderInput, ChevronDown, Download, Folder, ArrowLeft, FolderKanban, Users, UserCheck, Link2, BookOpen } from 'lucide-react'
 import type { Article, Library, Project } from '@/types'
 import { LibraryModal } from '@/components/modals/LibraryModal'
 import { ImportArticlesModal } from '@/components/modals/ImportArticlesModal'
 import { ArticleModal } from '@/components/modals/ArticleModal'
 import { AssignProjectsModal } from '@/components/modals/AssignProjectsModal'
+import { ShareModal } from '@/components/modals/ShareModal'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 
 // Standard construction lots (16 lots)
@@ -57,6 +58,7 @@ export function LibraryPage() {
   const [importModalOpen, setImportModalOpen] = useState(false)
   const [articleModalOpen, setArticleModalOpen] = useState(false)
   const [assignProjectsModalOpen, setAssignProjectsModalOpen] = useState(false)
+  const [shareModalOpen, setShareModalOpen] = useState(false)
   const [editingLibrary, setEditingLibrary] = useState<Library | null>(null)
   const [editingArticle, setEditingArticle] = useState<Article | null>(null)
   const [manageMode, setManageMode] = useState(false)
@@ -70,6 +72,7 @@ export function LibraryPage() {
   const [lotFilter, setLotFilter] = useState('all')
   const [sousCategorieFilter, setSousCategorieFilter] = useState('all')
   const [uniteFilter, setUniteFilter] = useState('all')
+  const [ownershipFilter, setOwnershipFilter] = useState<'all' | 'owned' | 'shared' | 'from_project'>('all')
 
   useEffect(() => {
     loadLibraries()
@@ -279,6 +282,22 @@ export function LibraryPage() {
 
   const currentLibrary = libraries.find(lib => lib.id === selectedLibrary)
 
+  // Filter libraries by ownership
+  const filteredLibraries = useMemo(() => {
+    return libraries.filter(library => {
+      if (ownershipFilter === 'all') return true
+      // Convertir en booléen car le backend peut retourner 0/1
+      const isOwner = Boolean(library.is_owner)
+      const fromSharedProject = Boolean(library.from_shared_project)
+      const hasDirectShare = Boolean(library.shared_role)
+
+      if (ownershipFilter === 'owned') return isOwner && !fromSharedProject
+      if (ownershipFilter === 'shared') return !isOwner && (hasDirectShare || fromSharedProject)
+      if (ownershipFilter === 'from_project') return fromSharedProject
+      return true
+    })
+  }, [libraries, ownershipFilter])
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -308,10 +327,16 @@ export function LibraryPage() {
             </>
           )}
           {selectedLibrary && (
-            <Button variant="outline" onClick={handleCreateArticle}>
-              <Plus className="w-4 h-4 mr-2" />
-              Ajouter un article
-            </Button>
+            <>
+              <Button variant="outline" onClick={() => setShareModalOpen(true)}>
+                <Users className="w-4 h-4 mr-2" />
+                Partager
+              </Button>
+              <Button variant="accent" onClick={handleCreateArticle}>
+                <Plus className="w-4 h-4 mr-2" />
+                Ajouter un article
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -319,7 +344,24 @@ export function LibraryPage() {
       {/* Vue des bibliothèques (grille de cartes) */}
       {!selectedLibrary && (
         <>
-          {libraries.length === 0 ? (
+          {/* Filtre de propriété */}
+          <div className="flex items-center gap-3">
+            <Filter className="w-4 h-4 text-gray-500" />
+            <span className="text-sm font-medium text-gray-700">Filtrer:</span>
+            <Select value={ownershipFilter} onValueChange={setOwnershipFilter}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Propriété" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Toutes les bibliothèques</SelectItem>
+                <SelectItem value="owned">Mes bibliothèques</SelectItem>
+                <SelectItem value="shared">Partagées avec moi</SelectItem>
+                <SelectItem value="from_project">De projets partagés</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {filteredLibraries.length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <p className="text-gray-600 mb-4">Aucune bibliothèque trouvée</p>
@@ -337,7 +379,7 @@ export function LibraryPage() {
             </Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {libraries.map((library) => (
+              {filteredLibraries.map((library) => (
                 <Card key={library.id} className="hover:shadow-xl transition-all group relative flex flex-col h-full">
                   <CardContent className="p-6 flex flex-col items-center text-center h-full">
                     {/* Menu 3 points */}
@@ -362,9 +404,24 @@ export function LibraryPage() {
                       </DropdownMenuContent>
                     </DropdownMenu>
 
-                    {/* Icône dossier */}
-                    <div className="mb-4">
-                      <Folder className="w-20 h-20 text-primary" strokeWidth={1.5} />
+                    {/* Icône bibliothèque */}
+                    <div className="mb-4 relative flex justify-center">
+                      <BookOpen className="w-20 h-20 text-primary" strokeWidth={1.5} />
+                      {Boolean(library.from_shared_project) ? (
+                        library.project_shared_role === 'viewer' ? (
+                          <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-1 shadow-md" title="Bibliothèque d'un projet partagé (lecture seule)">
+                            <Link2 className="w-5 h-5 text-purple-600" />
+                          </div>
+                        ) : (
+                          <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-1 shadow-md" title="Bibliothèque d'un projet partagé (modification)">
+                            <UserCheck className="w-5 h-5 text-blue-600" />
+                          </div>
+                        )
+                      ) : !Boolean(library.is_owner) && (
+                        <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-1 shadow-md" title="Bibliothèque partagée">
+                          <UserCheck className="w-5 h-5 text-blue-600" />
+                        </div>
+                      )}
                     </div>
 
                     {/* Nom de la bibliothèque */}
@@ -842,6 +899,16 @@ export function LibraryPage() {
           libraryId={selectedLibrary}
           libraryName={libraries.find(l => l.id === selectedLibrary)?.nom || ''}
           onSuccess={() => selectedLibrary && loadLibraryProjects(selectedLibrary)}
+        />
+      )}
+      {selectedLibrary && (
+        <ShareModal
+          open={shareModalOpen}
+          onOpenChange={setShareModalOpen}
+          type="library"
+          itemId={selectedLibrary}
+          itemName={libraries.find(l => l.id === selectedLibrary)?.nom || ''}
+          onSuccess={() => selectedLibrary && loadLibraries()}
         />
       )}
     </div>

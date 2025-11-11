@@ -35,6 +35,22 @@ interface ChiffrageData {
 export function ChiffragePage() {
   const navigate = useNavigate()
   const { projectId } = useParams({ strict: false })
+
+  // Get navigation source from URL search params
+  const getFromSource = () => {
+    const params = new URLSearchParams(window.location.search)
+    const from = params.get('from')
+    const fromFolder = params.get('from_folder')
+
+    if (from === 'dashboard') {
+      return { type: 'dashboard' as const }
+    } else if (fromFolder) {
+      return { type: 'folder' as const, folderId: parseInt(fromFolder) }
+    }
+    return { type: 'projects' as const }
+  }
+
+  const fromSource = getFromSource()
   const [chiffrageData, setChiffrageData] = useState<ChiffrageData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
@@ -110,9 +126,20 @@ export function ChiffragePage() {
                 Chiffrage non disponible
               </h2>
               <p className="text-gray-600 mb-6">{error}</p>
-              <Button onClick={() => navigate({ to: '/projects' })}>
+              <Button onClick={() => {
+                const search: any = {}
+                if (fromSource.type === 'dashboard') {
+                  search.from = 'dashboard'
+                } else if (fromSource.type === 'folder') {
+                  search.from_folder = fromSource.folderId
+                }
+                navigate({
+                  to: `/projects/${projectId}`,
+                  search: Object.keys(search).length > 0 ? search : undefined
+                })
+              }}>
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Retour aux projets
+                Retour au projet
               </Button>
             </div>
           </CardContent>
@@ -128,7 +155,18 @@ export function ChiffragePage() {
         <div className="flex items-center space-x-4">
           <Button
             variant="outline"
-            onClick={() => navigate({ to: '/projects' })}
+            onClick={() => {
+              const search: any = {}
+              if (fromSource.type === 'dashboard') {
+                search.from = 'dashboard'
+              } else if (fromSource.type === 'folder') {
+                search.from_folder = fromSource.folderId
+              }
+              navigate({
+                to: `/projects/${projectId}`,
+                search: Object.keys(search).length > 0 ? search : undefined
+              })
+            }}
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Retour

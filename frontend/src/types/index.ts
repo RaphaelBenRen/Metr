@@ -27,6 +27,7 @@ export type ProjectTypology =
 export interface Project {
   id: number
   user_id: number
+  folder_id?: number | null
   nom_projet: string
   client: string
   reference_interne?: string
@@ -35,6 +36,21 @@ export interface Project {
   adresse?: string
   date_livraison_prevue?: string
   statut: ProjectStatus
+  is_owner?: boolean
+  shared_role?: 'viewer' | 'editor'
+  created_at: string
+  updated_at: string
+}
+
+// Project Folder Types
+export interface ProjectFolder {
+  id: number
+  user_id: number
+  parent_folder_id?: number | null
+  nom: string
+  couleur: string
+  is_system: boolean
+  position: number
   created_at: string
   updated_at: string
 }
@@ -46,6 +62,10 @@ export interface Library {
   nom: string
   description?: string
   is_global?: boolean
+  is_owner?: boolean
+  shared_role?: 'viewer' | 'editor'
+  from_shared_project?: boolean
+  project_shared_role?: 'viewer' | 'editor'
   created_at: string
   updated_at: string
 }
@@ -140,4 +160,17 @@ export interface AuthState {
   user: User | null
   isAuthenticated: boolean
   isLoading: boolean
+}
+
+// Notification Types
+export interface PendingShare {
+  id: number
+  project_id: number
+  role: 'viewer' | 'editor'
+  created_at: string
+  nom_projet: string
+  client: string
+  typologie: string
+  owner_name: string
+  owner_email: string
 }

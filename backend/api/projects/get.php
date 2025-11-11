@@ -22,8 +22,14 @@ if (!$db) {
 try {
     $userId = getCurrentUserId();
 
-    // Get project by ID and verify ownership
-    $query = "SELECT * FROM projects WHERE id = :id AND user_id = :user_id";
+    // Get project by ID and verify ownership OR shared access
+    $query = "SELECT DISTINCT p.*,
+              CASE WHEN p.user_id = :user_id THEN 1 ELSE 0 END as is_owner,
+              ps.role as shared_role
+              FROM projects p
+              LEFT JOIN project_shares ps ON p.id = ps.project_id AND ps.shared_with_user_id = :user_id
+              WHERE p.id = :id AND (p.user_id = :user_id OR ps.shared_with_user_id = :user_id)
+              LIMIT 1";
     $stmt = $db->prepare($query);
     $stmt->bindParam(':id', $projectId);
     $stmt->bindParam(':user_id', $userId);

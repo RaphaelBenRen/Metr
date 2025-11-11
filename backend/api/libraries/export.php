@@ -25,8 +25,12 @@ try {
     $userId = getCurrentUserId();
     $libraryId = $_GET['library_id'];
 
-    // Vérifier que la bibliothèque appartient à l'utilisateur
-    $query = "SELECT * FROM libraries WHERE id = :id AND user_id = :user_id LIMIT 1";
+    // Vérifier que l'utilisateur a accès à la bibliothèque (propriétaire, partagée, ou globale)
+    $query = "SELECT l.*
+              FROM libraries l
+              LEFT JOIN library_shares ls ON l.id = ls.library_id AND ls.shared_with_user_id = :user_id
+              WHERE l.id = :id AND (l.user_id = :user_id OR ls.shared_with_user_id = :user_id OR l.is_global = 1)
+              LIMIT 1";
     $stmt = $db->prepare($query);
     $stmt->bindParam(':id', $libraryId);
     $stmt->bindParam(':user_id', $userId);

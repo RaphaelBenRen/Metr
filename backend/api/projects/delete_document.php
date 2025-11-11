@@ -26,14 +26,18 @@ if (!$db) {
 try {
     $userId = getCurrentUserId();
 
-    // Get document and verify ownership
-    $query = "SELECT pd.*, p.user_id
+    // Get document and verify ownership OR shared access with editor role
+    $query = "SELECT pd.*,
+              CASE WHEN p.user_id = :user_id THEN 1 ELSE 0 END as is_owner,
+              ps.role as shared_role
               FROM project_documents pd
               JOIN projects p ON pd.project_id = p.id
-              WHERE pd.id = :id";
+              LEFT JOIN project_shares ps ON p.id = ps.project_id AND ps.shared_with_user_id = :user_id
+              WHERE pd.id = :id AND (p.user_id = :user_id OR ps.shared_with_user_id = :user_id)";
 
     $stmt = $db->prepare($query);
     $stmt->bindParam(':id', $docId);
+    $stmt->bindParam(':user_id', $userId);
     $stmt->execute();
 
     $document = $stmt->fetch();
@@ -42,8 +46,10 @@ try {
         jsonError('Document non trouvé', 404);
     }
 
-    if ($document['user_id'] != $userId) {
-        jsonError('Accès refusé', 403);
+    // Vérifier les droits d'édition
+    $canEdit = $document['is_owner'] || ($document['shared_role'] === 'editor');
+    if (!$canEdit) {
+        jsonError('Vous n\'avez pas les droits pour supprimer ce document', 403);
     }
 
     // Delete file from filesystem

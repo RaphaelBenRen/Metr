@@ -37,15 +37,29 @@ if (!$db) {
 try {
     $userId = getCurrentUserId();
 
-    // Verify project ownership
-    $query = "SELECT id FROM projects WHERE id = :id AND user_id = :user_id";
+    // Verify project ownership OR shared access with editor role
+    $query = "SELECT p.id,
+              CASE WHEN p.user_id = :user_id THEN 1 ELSE 0 END as is_owner,
+              ps.role as shared_role
+              FROM projects p
+              LEFT JOIN project_shares ps ON p.id = ps.project_id AND ps.shared_with_user_id = :user_id
+              WHERE p.id = :id AND (p.user_id = :user_id OR ps.shared_with_user_id = :user_id)
+              LIMIT 1";
     $stmt = $db->prepare($query);
     $stmt->bindParam(':id', $projectId);
     $stmt->bindParam(':user_id', $userId);
     $stmt->execute();
 
-    if (!$stmt->fetch()) {
+    $project = $stmt->fetch();
+
+    if (!$project) {
         jsonError('Projet non trouvé ou accès refusé', 403);
+    }
+
+    // Vérifier les droits d'édition
+    $canEdit = $project['is_owner'] || ($project['shared_role'] === 'editor');
+    if (!$canEdit) {
+        jsonError('Vous n\'avez pas les droits pour uploader des documents sur ce projet', 403);
     }
 
     // Validate file

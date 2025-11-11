@@ -14,6 +14,7 @@ interface ProjectModalProps {
   onOpenChange: (open: boolean) => void
   onSuccess: () => void
   project?: Project | null
+  defaultFolderId?: number | null
 }
 
 const typologies = [
@@ -38,7 +39,7 @@ interface UploadedDocument {
   created_at?: string
 }
 
-export function ProjectModal({ open, onOpenChange, onSuccess, project }: ProjectModalProps) {
+export function ProjectModal({ open, onOpenChange, onSuccess, project, defaultFolderId }: ProjectModalProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [activeTab, setActiveTab] = useState('info')
@@ -128,7 +129,12 @@ export function ProjectModal({ open, onOpenChange, onSuccess, project }: Project
           setError(response.error || 'Erreur lors de la mise à jour du projet')
         }
       } else {
-        const response = await projectsApi.create(dataToSend)
+        // Add folder_id when creating new project
+        const createData = {
+          ...dataToSend,
+          folder_id: defaultFolderId
+        }
+        const response = await projectsApi.create(createData)
         if (response.success && response.data) {
           const newProjectId = response.data.id
           setProjectId(newProjectId)

@@ -27,20 +27,36 @@ try {
     $userId = getCurrentUserId();
     $projectId = $input['id'];
 
-    // Vérifier que le projet appartient à l'utilisateur
-    $query = "SELECT * FROM projects WHERE id = :id AND user_id = :user_id LIMIT 1";
+    // Vérifier que l'utilisateur a accès au projet avec droits d'édition (propriétaire ou éditeur)
+    $query = "SELECT p.*,
+              CASE WHEN p.user_id = :user_id THEN 1 ELSE 0 END as is_owner,
+              ps.role as shared_role
+              FROM projects p
+              LEFT JOIN project_shares ps ON p.id = ps.project_id AND ps.shared_with_user_id = :user_id
+              WHERE p.id = :id AND (p.user_id = :user_id OR ps.shared_with_user_id = :user_id)
+              LIMIT 1";
     $stmt = $db->prepare($query);
     $stmt->bindParam(':id', $projectId);
     $stmt->bindParam(':user_id', $userId);
     $stmt->execute();
 
-    if ($stmt->rowCount() === 0) {
+    $project = $stmt->fetch();
+
+    if (!$project) {
         jsonError('Projet non trouvé ou accès non autorisé', 404);
+    }
+
+    // Vérifier les droits d'édition (propriétaire ou éditeur)
+    $isOwner = $project['is_owner'];
+    $canEdit = $isOwner || ($project['shared_role'] === 'editor');
+
+    if (!$canEdit) {
+        jsonError('Vous n\'avez pas les droits pour modifier ce projet', 403);
     }
 
     // Construire la requête de mise à jour dynamiquement
     $fields = [];
-    $params = [':id' => $projectId, ':user_id' => $userId];
+    $params = [':id' => $projectId];
 
     if (isset($input['nom_projet'])) {
         $fields[] = 'nom_projet = :nom_projet';
@@ -73,13 +89,49 @@ try {
     if (isset($input['statut'])) {
         $fields[] = 'statut = :statut';
         $params[':statut'] = $input['statut'];
+
+        // Auto-assign folder based on status change (only if user is owner)
+        if ($isOwner) {
+            $newStatus = $input['statut'];
+            $folder_id = null;
+
+            if ($newStatus === 'Archivé') {
+                // Get "Archivés" folder (using LIKE for encoding issues)
+                $folderQuery = "SELECT id FROM project_folders WHERE user_id = :user_id AND nom LIKE 'Archiv%' AND is_system = 1 LIMIT 1";
+                $folderStmt = $db->prepare($folderQuery);
+                $folderStmt->bindParam(':user_id', $userId);
+                $folderStmt->execute();
+                $folder_id = $folderStmt->fetchColumn();
+
+                // Fallback if not found
+                if (!$folder_id) {
+                    $folderQuery = "SELECT id FROM project_folders WHERE user_id = :user_id AND (nom = 'Archivés' OR nom = 'ArchivÃ©s') AND is_system = 1 LIMIT 1";
+                    $folderStmt = $db->prepare($folderQuery);
+                    $folderStmt->bindParam(':user_id', $userId);
+                    $folderStmt->execute();
+                    $folder_id = $folderStmt->fetchColumn();
+                }
+            } else if ($project['statut'] === 'Archivé' && $newStatus !== 'Archivé') {
+                // Moving out of archived, put back in "Mes projets"
+                $folderQuery = "SELECT id FROM project_folders WHERE user_id = :user_id AND nom LIKE 'Mes projet%' AND is_system = 1 LIMIT 1";
+                $folderStmt = $db->prepare($folderQuery);
+                $folderStmt->bindParam(':user_id', $userId);
+                $folderStmt->execute();
+                $folder_id = $folderStmt->fetchColumn();
+            }
+
+            if ($folder_id !== null) {
+                $fields[] = 'folder_id = :folder_id';
+                $params[':folder_id'] = $folder_id;
+            }
+        }
     }
 
     if (empty($fields)) {
         jsonError('Aucune donnée à mettre à jour');
     }
 
-    $query = "UPDATE projects SET " . implode(', ', $fields) . " WHERE id = :id AND user_id = :user_id";
+    $query = "UPDATE projects SET " . implode(', ', $fields) . " WHERE id = :id";
     $stmt = $db->prepare($query);
 
     foreach ($params as $key => $value) {
