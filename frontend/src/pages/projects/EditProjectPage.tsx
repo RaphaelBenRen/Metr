@@ -34,6 +34,8 @@ const typologies = [
   'Autre'
 ]
 
+const phases = ['Esquisse', 'Avant-projet', 'Avant-projet définitif']
+
 const statuts = ['Brouillon', 'En cours', 'Terminé', 'Archivé']
 
 export function EditProjectPage() {
@@ -64,10 +66,10 @@ export function EditProjectPage() {
     client: '',
     reference_interne: '',
     typologie: 'Maison individuelle',
+    phase: 'Esquisse',
     adresse: '',
     date_livraison_prevue: '',
-    statut: 'Brouillon',
-    surface_totale: ''
+    statut: 'Brouillon'
   })
 
   useEffect(() => {
@@ -95,10 +97,10 @@ export function EditProjectPage() {
           client: proj.client || '',
           reference_interne: proj.reference_interne || '',
           typologie: proj.typologie || 'Maison individuelle',
+          phase: proj.phase || 'Esquisse',
           adresse: proj.adresse || '',
           date_livraison_prevue: proj.date_livraison_prevue || '',
-          statut: proj.statut || 'Brouillon',
-          surface_totale: proj.surface_totale?.toString() || ''
+          statut: proj.statut || 'Brouillon'
         })
       } else {
         setError(projectResponse.error || 'Projet non trouvé')
@@ -125,12 +127,7 @@ export function EditProjectPage() {
     setSaving(true)
 
     try {
-      const dataToSend = {
-        ...formData,
-        surface_totale: formData.surface_totale ? parseFloat(formData.surface_totale) : null
-      }
-
-      const response = await projectsApi.update(projectId, dataToSend)
+      const response = await projectsApi.update(projectId, formData)
 
       if (response.success) {
         navigate({ to: `/projects/${projectId}` })
@@ -360,6 +357,28 @@ export function EditProjectPage() {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="phase" className="flex items-center gap-1">
+                  <span className="text-red-500">*</span>
+                  Phase du projet
+                </Label>
+                <Select
+                  value={formData.phase}
+                  onValueChange={(value) => setFormData({ ...formData, phase: value })}
+                >
+                  <SelectTrigger className="h-12">
+                    <SelectValue placeholder="Sélectionnez une phase" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {phases.map((phase) => (
+                      <SelectItem key={phase} value={phase}>
+                        {phase}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="statut">Statut</Label>
                 <Select
                   value={formData.statut}
@@ -396,19 +415,6 @@ export function EditProjectPage() {
                   type="date"
                   value={formData.date_livraison_prevue}
                   onChange={(e) => setFormData({ ...formData, date_livraison_prevue: e.target.value })}
-                  className="h-12"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="surface_totale">Surface totale (m²)</Label>
-                <Input
-                  id="surface_totale"
-                  type="number"
-                  step="0.01"
-                  value={formData.surface_totale}
-                  onChange={(e) => setFormData({ ...formData, surface_totale: e.target.value })}
-                  placeholder="150.00"
                   className="h-12"
                 />
               </div>

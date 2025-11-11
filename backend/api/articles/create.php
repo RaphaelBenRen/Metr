@@ -39,8 +39,8 @@ try {
     }
 
     // Insérer l'article
-    $query = "INSERT INTO articles (library_id, designation, lot, sous_categorie, unite, prix_unitaire, is_favorite, statut)
-              VALUES (:library_id, :designation, :lot, :sous_categorie, :unite, :prix_unitaire, :is_favorite, :statut)";
+    $query = "INSERT INTO articles (library_id, designation, lot, sous_categorie, unite, prix_unitaire, statut)
+              VALUES (:library_id, :designation, :lot, :sous_categorie, :unite, :prix_unitaire, :statut)";
 
     $stmt = $db->prepare($query);
     $stmt->bindParam(':library_id', $libraryId);
@@ -49,7 +49,6 @@ try {
     $stmt->bindValue(':sous_categorie', $input['sous_categorie'] ?? null);
     $stmt->bindParam(':unite', $input['unite']);
     $stmt->bindParam(':prix_unitaire', $input['prix_unitaire']);
-    $stmt->bindValue(':is_favorite', $input['is_favorite'] ?? 0, PDO::PARAM_INT);
     $stmt->bindValue(':statut', $input['statut'] ?? 'Nouveau');
 
     if ($stmt->execute()) {

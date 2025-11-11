@@ -144,6 +144,25 @@ export const projectsApi = {
     }).then(res => res.json())
   },
 
+  // Project Libraries
+  getLibraries: async (projectId: number) => {
+    return request(`/projects/libraries.php?project_id=${projectId}`)
+  },
+
+  assignLibrary: async (projectId: number, libraryId: number) => {
+    return request('/projects/assign_library.php', {
+      method: 'POST',
+      body: JSON.stringify({ project_id: projectId, library_id: libraryId }),
+    })
+  },
+
+  unassignLibrary: async (projectId: number, libraryId: number) => {
+    return request('/projects/unassign_library.php', {
+      method: 'POST',
+      body: JSON.stringify({ project_id: projectId, library_id: libraryId }),
+    })
+  },
+
   // Documents
   uploadDocument: async (projectId: number, type: 'plan' | 'document', file: File) => {
     const formData = new FormData()
@@ -204,6 +223,11 @@ export const librariesApi = {
       body: formData, // Don't set Content-Type for FormData
     }).then(res => res.json())
   },
+
+  // Library Projects
+  getProjects: async (libraryId: number) => {
+    return request(`/libraries/projects.php?library_id=${libraryId}`)
+  },
 }
 
 /**
@@ -238,13 +262,6 @@ export const articlesApi = {
   delete: async (id: number) => {
     return request(`/articles/delete.php?id=${id}`, {
       method: 'DELETE',
-    })
-  },
-
-  toggleFavorite: async (id: number) => {
-    return request('/articles/favorite.php', {
-      method: 'PUT',
-      body: JSON.stringify({ id }),
     })
   },
 
@@ -333,15 +350,18 @@ export const adminApi = {
 }
 
 /**
- * Devis API
+ * Chiffrage API
  */
-export const devisApi = {
+export const chiffrageApi = {
   get: async (projectId: number) => {
-    return request(`/devis/get.php?project_id=${projectId}`)
+    return request(`/chiffrage/get.php?project_id=${projectId}`)
   },
 
-  exportCSV: (projectId: number) => {
-    const url = `${API_BASE_URL}/devis/export_csv.php?project_id=${projectId}`
+  exportExcel: (projectId: number) => {
+    const url = `${API_BASE_URL}/chiffrage/export_excel.php?project_id=${projectId}`
     window.open(url, '_blank')
   },
 }
+
+// Backward compatibility alias
+export const devisApi = chiffrageApi

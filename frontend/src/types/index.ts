@@ -14,6 +14,7 @@ export interface User {
 
 // Project Types
 export type ProjectStatus = 'En cours' | 'Brouillon' | 'Terminé' | 'Archivé'
+export type ProjectPhase = 'Esquisse' | 'Avant-projet' | 'Avant-projet définitif'
 export type ProjectTypology =
   | 'Maison individuelle'
   | 'Immeuble résidentiel'
@@ -30,10 +31,10 @@ export interface Project {
   client: string
   reference_interne?: string
   typologie: ProjectTypology
+  phase?: ProjectPhase
   adresse?: string
   date_livraison_prevue?: string
   statut: ProjectStatus
-  surface_totale?: number
   created_at: string
   updated_at: string
 }
@@ -79,7 +80,6 @@ export interface Article {
   sous_categorie?: string
   unite: ArticleUnit
   prix_unitaire: number
-  is_favorite: boolean
   statut: ArticleStatus
   created_at: string
   updated_at: string

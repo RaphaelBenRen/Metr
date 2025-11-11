@@ -8,7 +8,7 @@ import { ProjectsPage } from './pages/projects/ProjectsPage'
 import { CreateProjectPage } from './pages/projects/CreateProjectPage'
 import { ProjectDetailPage } from './pages/projects/ProjectDetailPage'
 import { EditProjectPage } from './pages/projects/EditProjectPage'
-import { DevisPage } from './pages/projects/DevisPage'
+import { ChiffragePage } from './pages/projects/ChiffragePage'
 import { LibraryPage } from './pages/library/LibraryPage'
 import { SettingsPage } from './pages/settings/SettingsPage'
 import { HelpPage } from './pages/help/HelpPage'
@@ -109,12 +109,23 @@ const editProjectRoute = createRoute({
   ),
 })
 
+const chiffrageRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/projects/$projectId/chiffrage',
+  component: () => (
+    <ProtectedRoute>
+      <ChiffragePage />
+    </ProtectedRoute>
+  ),
+})
+
+// Backward compatibility route
 const devisRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/projects/$projectId/devis',
   component: () => (
     <ProtectedRoute>
-      <DevisPage />
+      <ChiffragePage />
     </ProtectedRoute>
   ),
 })
@@ -175,6 +186,7 @@ const routeTree = rootRoute.addChildren([
   createProjectRoute,
   editProjectRoute,
   projectDetailRoute,
+  chiffrageRoute,
   devisRoute,
   libraryRoute,
   settingsRoute,

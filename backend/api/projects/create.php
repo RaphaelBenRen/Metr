@@ -31,13 +31,13 @@ try {
     $client = $input['client'];
     $reference_interne = $input['reference_interne'] ?? null;
     $typologie = $input['typologie'];
+    $phase = $input['phase'] ?? 'Esquisse';
     $adresse = $input['adresse'] ?? null;
-    $date_livraison_prevue = $input['date_livraison_prevue'] ?? null;
+    $date_livraison_prevue = (!empty($input['date_livraison_prevue']) && $input['date_livraison_prevue'] !== '') ? $input['date_livraison_prevue'] : null;
     $statut = $input['statut'] ?? 'Brouillon';
-    $surface_totale = isset($input['surface_totale']) && $input['surface_totale'] !== '' ? $input['surface_totale'] : null;
 
-    $query = "INSERT INTO projects (user_id, nom_projet, client, reference_interne, typologie, adresse, date_livraison_prevue, statut, surface_totale)
-              VALUES (:user_id, :nom_projet, :client, :reference_interne, :typologie, :adresse, :date_livraison_prevue, :statut, :surface_totale)";
+    $query = "INSERT INTO projects (user_id, nom_projet, client, reference_interne, typologie, phase, adresse, date_livraison_prevue, statut)
+              VALUES (:user_id, :nom_projet, :client, :reference_interne, :typologie, :phase, :adresse, :date_livraison_prevue, :statut)";
 
     $stmt = $db->prepare($query);
     $stmt->bindParam(':user_id', $userId);
@@ -45,10 +45,10 @@ try {
     $stmt->bindParam(':client', $client);
     $stmt->bindParam(':reference_interne', $reference_interne);
     $stmt->bindParam(':typologie', $typologie);
+    $stmt->bindParam(':phase', $phase);
     $stmt->bindParam(':adresse', $adresse);
     $stmt->bindParam(':date_livraison_prevue', $date_livraison_prevue);
     $stmt->bindParam(':statut', $statut);
-    $stmt->bindParam(':surface_totale', $surface_totale);
 
     if ($stmt->execute()) {
         $projectId = $db->lastInsertId();

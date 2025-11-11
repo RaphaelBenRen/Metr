@@ -1,0 +1,27 @@
+designation,lot,sous_categorie,unite,prix_unitaire,statut
+Décapage terre végétale,1-TERRASSEMENTS,Autre,M3,12.00,Validé
+Fouilles en rigole,1-TERRASSEMENTS,Autre,M3,18.50,Validé
+Béton C25/30 pour fondations,2-GROS ŒUVRE,Fondation,M3,120.50,Validé
+Parpaing 20x20x50,2-GROS ŒUVRE,Autre,U,2.50,Validé
+Plancher hourdis 16+4,2-GROS ŒUVRE,Autre,M2,65.00,Validé
+Charpente bois traditionnelle,3-CHARPENTE,Autre,M2,85.00,Validé
+Tuile béton,4-COUVERTURE,Autre,M2,38.00,Validé
+Gouttière PVC,4-COUVERTURE,Autre,ML,18.00,Validé
+Tube PER diamètre 16,5-PLOMBERIE,Sanitaire,ML,3.20,Validé
+Lavabo céramique blanc,5-PLOMBERIE,Sanitaire,U,85.00,Validé
+WC suspendu avec bâti,5-PLOMBERIE,Sanitaire,U,320.00,Validé
+Tableau électrique 3 rangées,6-ÉLECTRICITÉ,Autre,U,180.00,Validé
+Prise électrique encastrée,6-ÉLECTRICITÉ,Autre,U,8.50,Validé
+Câble électrique 3x2.5mm²,6-ÉLECTRICITÉ,Autre,ML,2.80,Validé
+Radiateur acier 1000W,7-CHAUFFAGE,Radiateur,U,120.00,Validé
+Fenêtre PVC double vitrage 100x120,8-MENUISERIES EXTÉRIEURES,Fenêtre,U,450.00,Validé
+Porte d'entrée PVC,8-MENUISERIES EXTÉRIEURES,Porte,U,850.00,Validé
+Porte intérieure bois 83x204,9-MENUISERIES INTÉRIEURES,Porte,U,120.00,Validé
+Plaque de plâtre BA13,11-PLÂTRERIE,Autre,M2,8.50,Validé
+Enduit plâtre,11-PLÂTRERIE,Autre,M2,12.00,Validé
+Carrelage grès cérame 60x60,12-CARRELAGE,Carrelage,M2,45.00,Validé
+Peinture acrylique blanche mate,13-PEINTURE,Peinture,L,8.50,Validé
+Parquet flottant chêne,14-REVÊTEMENTS DE SOL,Autre,M2,38.00,Validé
+Faux plafond suspendu,15-PLAFONDS,Autre,M2,28.00,Validé
+Bordure béton T2,16-VRD,Autre,ML,15.00,Validé
+Enrobé bitumineux,16-VRD,Autre,M2,35.00,Validé

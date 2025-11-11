@@ -93,7 +93,7 @@ Secondary: #F3F4F6 (gris clair)
 
 **CORS error ?**
 
-d c:\wamp64\www\metr2\frontend
+cd c:\wamp64\www\metr2\frontend
 >> npm install
 >> npm run dev
 

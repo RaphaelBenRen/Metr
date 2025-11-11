@@ -7,14 +7,14 @@ interface ImportArticlesModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess: () => void
-  libraryId: number
 }
 
-export function ImportArticlesModal({ open, onOpenChange, onSuccess, libraryId }: ImportArticlesModalProps) {
+export function ImportArticlesModal({ open, onOpenChange, onSuccess }: ImportArticlesModalProps) {
   const [file, setFile] = useState<File | null>(null)
+  const [libraryName, setLibraryName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [result, setResult] = useState<{ imported: number; errors: string[] } | null>(null)
+  const [result, setResult] = useState<{ library: any; imported: number; errors: string[] } | null>(null)
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0]
@@ -25,6 +25,11 @@ export function ImportArticlesModal({ open, onOpenChange, onSuccess, libraryId }
         return
       }
       setFile(selectedFile)
+      // Suggérer le nom du fichier (sans extension) comme nom de bibliothèque
+      if (!libraryName) {
+        const fileName = selectedFile.name.replace('.csv', '').replace(/_/g, ' ')
+        setLibraryName(fileName)
+      }
       setError('')
       setResult(null)
     }
@@ -36,6 +41,10 @@ export function ImportArticlesModal({ open, onOpenChange, onSuccess, libraryId }
       setError('Veuillez sélectionner un fichier')
       return
     }
+    if (!libraryName.trim()) {
+      setError('Veuillez saisir un nom de bibliothèque')
+      return
+    }
 
     setError('')
     setLoading(true)
@@ -44,9 +53,9 @@ export function ImportArticlesModal({ open, onOpenChange, onSuccess, libraryId }
     try {
       const formData = new FormData()
       formData.append('file', file)
-      formData.append('library_id', libraryId.toString())
+      formData.append('library_name', libraryName.trim())
 
-      const response = await fetch('http://localhost/metr2/backend/api/libraries/import.php', {
+      const response = await fetch('http://localhost/metr2/backend/api/libraries/import_complete.php', {
         method: 'POST',
         credentials: 'include',
         body: formData,
@@ -59,7 +68,7 @@ export function ImportArticlesModal({ open, onOpenChange, onSuccess, libraryId }
         onSuccess()
         setTimeout(() => {
           onOpenChange(false)
-        }, 2000)
+        }, 3000)
       } else {
         setError(data.error || 'Erreur lors de l\'import')
       }
@@ -88,6 +97,7 @@ export function ImportArticlesModal({ open, onOpenChange, onSuccess, libraryId }
 
   const handleClose = () => {
     setFile(null)
+    setLibraryName('')
     setError('')
     setResult(null)
     onOpenChange(false)
@@ -97,7 +107,7 @@ export function ImportArticlesModal({ open, onOpenChange, onSuccess, libraryId }
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Importer des articles depuis CSV</DialogTitle>
+          <DialogTitle>Importer une bibliothèque depuis CSV</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -110,7 +120,8 @@ export function ImportArticlesModal({ open, onOpenChange, onSuccess, libraryId }
 
           {result && (
             <div className="p-3 text-sm text-success bg-success/10 border border-success/20 rounded-md">
-              <p className="font-semibold">{result.imported} article(s) importé(s) avec succès !</p>
+              <p className="font-semibold">Bibliothèque "{result.library?.nom}" créée avec succès !</p>
+              <p className="mt-1">{result.imported} article(s) importé(s)</p>
               {result.errors.length > 0 && (
                 <div className="mt-2">
                   <p className="font-semibold text-destructive">Erreurs :</p>
@@ -127,13 +138,29 @@ export function ImportArticlesModal({ open, onOpenChange, onSuccess, libraryId }
           <div className="space-y-3">
             <div className="flex items-center justify-between p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <div>
-                <p className="text-sm font-medium text-blue-900">Besoin d'un modèle ?</p>
-                <p className="text-xs text-blue-700">Téléchargez notre fichier CSV d'exemple</p>
+                <p className="text-sm font-medium text-blue-900">Exemples de bibliothèques</p>
+                <p className="text-xs text-blue-700">Retrouvez des exemples dans backend/database/exemples_bibliotheques/</p>
               </div>
               <Button type="button" size="sm" variant="outline" onClick={downloadTemplate}>
                 <Download className="w-4 h-4 mr-2" />
-                Télécharger
+                Modèle CSV
               </Button>
+            </div>
+
+            {/* Nom de la bibliothèque */}
+            <div className="space-y-2">
+              <label htmlFor="library-name" className="text-sm font-medium text-gray-900">
+                Nom de la bibliothèque <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                id="library-name"
+                value={libraryName}
+                onChange={(e) => setLibraryName(e.target.value)}
+                placeholder="Ex: Ma bibliothèque de gros œuvre"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                disabled={loading}
+              />
             </div>
 
             <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary transition-colors">
@@ -171,7 +198,7 @@ export function ImportArticlesModal({ open, onOpenChange, onSuccess, libraryId }
             <Button type="button" variant="outline" onClick={handleClose} disabled={loading}>
               Annuler
             </Button>
-            <Button type="submit" variant="accent" disabled={loading || !file}>
+            <Button type="submit" variant="accent" disabled={loading || !file || !libraryName.trim()}>
               {loading ? 'Import en cours...' : 'Importer'}
             </Button>
           </DialogFooter>

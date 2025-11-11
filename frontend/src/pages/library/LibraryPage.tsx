@@ -2,13 +2,14 @@ import { useEffect, useState, useMemo } from 'react'
 import { articlesApi, librariesApi } from '@/services/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Plus, Search, Upload, Settings, Star, Edit, Trash2, MoreVertical, Filter, CheckSquare, X, FolderInput, ChevronDown } from 'lucide-react'
-import type { Article, Library } from '@/types'
+import { Plus, Search, Upload, Settings, Edit, Trash2, MoreVertical, Filter, CheckSquare, X, FolderInput, ChevronDown, Download, Folder, ArrowLeft, FolderKanban } from 'lucide-react'
+import type { Article, Library, Project } from '@/types'
 import { LibraryModal } from '@/components/modals/LibraryModal'
 import { ImportArticlesModal } from '@/components/modals/ImportArticlesModal'
 import { ArticleModal } from '@/components/modals/ArticleModal'
+import { AssignProjectsModal } from '@/components/modals/AssignProjectsModal'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 
 // Standard construction lots (16 lots)
@@ -49,11 +50,13 @@ export function LibraryPage() {
   const [articles, setArticles] = useState<Article[]>([])
   const [libraries, setLibraries] = useState<Library[]>([])
   const [selectedLibrary, setSelectedLibrary] = useState<number | null>(null)
+  const [libraryProjects, setLibraryProjects] = useState<Project[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [loading, setLoading] = useState(true)
   const [libraryModalOpen, setLibraryModalOpen] = useState(false)
   const [importModalOpen, setImportModalOpen] = useState(false)
   const [articleModalOpen, setArticleModalOpen] = useState(false)
+  const [assignProjectsModalOpen, setAssignProjectsModalOpen] = useState(false)
   const [editingLibrary, setEditingLibrary] = useState<Library | null>(null)
   const [editingArticle, setEditingArticle] = useState<Article | null>(null)
   const [manageMode, setManageMode] = useState(false)
@@ -75,6 +78,11 @@ export function LibraryPage() {
   useEffect(() => {
     if (selectedLibrary) {
       loadArticles(selectedLibrary)
+      loadLibraryProjects(selectedLibrary)
+    } else {
+      setArticles([])
+      setLibraryProjects([])
+      setLoading(false)
     }
   }, [selectedLibrary])
 
@@ -83,12 +91,12 @@ export function LibraryPage() {
       const response = await librariesApi.list()
       if (response.success && response.data) {
         setLibraries(response.data)
-        if (response.data.length > 0 && !selectedLibrary) {
-          setSelectedLibrary(response.data[0].id)
-        }
+        // Ne plus sélectionner automatiquement la première bibliothèque
       }
     } catch (error) {
       console.error('Error loading libraries:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -106,16 +114,17 @@ export function LibraryPage() {
     }
   }
 
-  const handleToggleFavorite = async (articleId: number) => {
+  const loadLibraryProjects = async (libraryId: number) => {
     try {
-      const response = await articlesApi.toggleFavorite(articleId)
-      if (response.success && selectedLibrary) {
-        loadArticles(selectedLibrary)
+      const response = await librariesApi.getProjects(libraryId)
+      if (response.success && response.data) {
+        setLibraryProjects(response.data)
       }
     } catch (error) {
-      console.error('Error toggling favorite:', error)
+      console.error('Error loading library projects:', error)
     }
   }
+
 
   const handleCreateLibrary = () => {
     setEditingLibrary(null)
@@ -136,7 +145,7 @@ export function LibraryPage() {
       if (response.success) {
         await loadLibraries()
         if (selectedLibrary === libraryId) {
-          setSelectedLibrary(libraries.length > 1 ? libraries[0].id : null)
+          setSelectedLibrary(null)
         }
       } else {
         alert(response.error || 'Erreur lors de la suppression')
@@ -145,6 +154,11 @@ export function LibraryPage() {
       console.error('Error deleting library:', error)
       alert('Erreur lors de la suppression')
     }
+  }
+
+  const handleOpenLibrary = (libraryId: number) => {
+    setSelectedLibrary(libraryId)
+    setManageMode(false)
   }
 
   const handleCreateArticle = () => {
@@ -269,100 +283,229 @@ export function LibraryPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold font-heading text-gray-900">
-          Ma bibliothèque
-        </h1>
+        <div className="flex items-center gap-4">
+          {selectedLibrary && (
+            <Button variant="ghost" size="sm" onClick={() => setSelectedLibrary(null)}>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Retour
+            </Button>
+          )}
+          <h1 className="text-3xl font-bold font-heading text-gray-900">
+            {selectedLibrary ? currentLibrary?.nom : 'Bibliothèque'}
+          </h1>
+        </div>
         <div className="flex space-x-3">
-          <Button variant="outline" onClick={() => setManageMode(!manageMode)}>
-            <Settings className="w-4 h-4 mr-2" />
-            {manageMode ? 'Mode normal' : 'Gérer les bibliothèques'}
-          </Button>
-          <Button variant="outline" onClick={handleCreateLibrary}>
-            <Plus className="w-4 h-4 mr-2" />
-            Nouvelle bibliothèque
-          </Button>
-          {selectedLibrary && !manageMode && (
+          {!selectedLibrary && (
             <>
-              <Button variant="outline" onClick={handleCreateArticle}>
+              <Button variant="outline" onClick={handleCreateLibrary}>
                 <Plus className="w-4 h-4 mr-2" />
-                Ajouter un article
+                Nouvelle bibliothèque
               </Button>
               <Button variant="accent" onClick={() => setImportModalOpen(true)}>
                 <Upload className="w-4 h-4 mr-2" />
-                Importer CSV
+                Importer bibliothèque CSV
               </Button>
             </>
+          )}
+          {selectedLibrary && (
+            <Button variant="outline" onClick={handleCreateArticle}>
+              <Plus className="w-4 h-4 mr-2" />
+              Ajouter un article
+            </Button>
           )}
         </div>
       </div>
 
-      {/* Library Selector */}
-      {libraries.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <p className="text-gray-600 mb-4">Aucune bibliothèque trouvée</p>
-            <Button variant="accent" onClick={handleCreateLibrary}>
-              <Plus className="w-4 h-4 mr-2" />
-              Créer ma première bibliothèque
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
+      {/* Vue des bibliothèques (grille de cartes) */}
+      {!selectedLibrary && (
         <>
-          {manageMode ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {libraries.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <p className="text-gray-600 mb-4">Aucune bibliothèque trouvée</p>
+                <div className="flex gap-2">
+                  <Button variant="accent" onClick={handleCreateLibrary}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Créer ma première bibliothèque
+                  </Button>
+                  <Button variant="outline" onClick={() => setImportModalOpen(true)}>
+                    <Upload className="w-4 h-4 mr-2" />
+                    Importer une bibliothèque
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {libraries.map((library) => (
-                <Card key={library.id} className="hover:shadow-lg transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-lg">{library.nom}</h3>
-                        <p className="text-sm text-gray-600 mt-1">
-                          {library.description || 'Pas de description'}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-2">
-                          Créée le {new Date(library.created_at).toLocaleDateString('fr-FR')}
-                        </p>
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          className="p-2 hover:bg-gray-100 rounded-lg"
-                          onClick={() => handleEditLibrary(library)}
-                        >
-                          <Edit className="w-4 h-4 text-gray-600" />
+                <Card key={library.id} className="hover:shadow-xl transition-all group relative flex flex-col h-full">
+                  <CardContent className="p-6 flex flex-col items-center text-center h-full">
+                    {/* Menu 3 points */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button className="absolute top-2 right-2 p-2 hover:bg-gray-100 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                          <MoreVertical className="w-4 h-4 text-gray-600" />
                         </button>
-                        <button
-                          className="p-2 hover:bg-red-100 rounded-lg"
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleEditLibrary(library)}>
+                          <Edit className="w-4 h-4 mr-2" />
+                          Modifier
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
                           onClick={() => handleDeleteLibrary(library.id)}
+                          className="text-red-600"
                         >
-                          <Trash2 className="w-4 h-4 text-red-600" />
-                        </button>
-                      </div>
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Supprimer
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    {/* Icône dossier */}
+                    <div className="mb-4">
+                      <Folder className="w-20 h-20 text-primary" strokeWidth={1.5} />
+                    </div>
+
+                    {/* Nom de la bibliothèque */}
+                    <h3 className="font-semibold text-lg text-gray-900 mb-2">
+                      {library.nom}
+                    </h3>
+
+                    {/* Description avec hauteur fixe */}
+                    <div className="h-12 mb-2 flex items-center justify-center">
+                      {library.description && (
+                        <p className="text-sm text-gray-600 line-clamp-2">
+                          {library.description}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Nombre d'articles */}
+                    <p className="text-xs text-gray-500 mb-4">
+                      En cours
+                    </p>
+
+                    {/* Spacer pour pousser les boutons vers le bas */}
+                    <div className="flex-grow"></div>
+
+                    {/* Boutons d'action */}
+                    <div className="flex gap-2 w-full">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => handleOpenLibrary(library.id)}
+                      >
+                        Ouvrir
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => {
+                          window.open(`http://localhost/metr2/backend/api/libraries/export.php?library_id=${library.id}`, '_blank')
+                        }}
+                      >
+                        Exporter
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
               ))}
             </div>
-          ) : (
+          )}
+        </>
+      )}
+
+      {/* Vue détaillée d'une bibliothèque (articles) */}
+      {selectedLibrary && (
             <>
-              <div className="flex items-center space-x-4">
-                <select
-                  className="flex h-10 w-full max-w-xs rounded-md border border-input bg-background px-3 py-2"
-                  value={selectedLibrary || ''}
-                  onChange={(e) => setSelectedLibrary(Number(e.target.value))}
-                >
-                  {libraries.map((lib) => (
-                    <option key={lib.id} value={lib.id}>
-                      {lib.nom}
-                    </option>
-                  ))}
-                </select>
-                {currentLibrary && (
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-4">
                   <span className="text-sm text-gray-600">
                     {articles.length} article(s)
                   </span>
+                </div>
+                {articles.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      window.open(`http://localhost/metr2/backend/api/libraries/export.php?library_id=${selectedLibrary}`, '_blank')
+                    }}
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Exporter en CSV
+                  </Button>
                 )}
               </div>
+
+              {/* Projects using this library */}
+              <Card className="mb-6">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <FolderKanban className="w-5 h-5" />
+                      Projets utilisant cette bibliothèque ({libraryProjects.length})
+                    </CardTitle>
+                    <Button
+                      variant="accent"
+                      size="sm"
+                      onClick={() => setAssignProjectsModalOpen(true)}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Gérer les projets
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {libraryProjects.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <FolderKanban className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                      <p>Aucun projet n'utilise cette bibliothèque</p>
+                      <p className="text-sm mt-1">
+                        Assignez cette bibliothèque à des projets pour faciliter le chiffrage
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {libraryProjects.map((project: any) => (
+                        <div
+                          key={project.id}
+                          className="border border-gray-200 rounded-lg p-3 hover:shadow-md transition-shadow cursor-pointer"
+                          onClick={() => window.location.href = `/projects/${project.id}`}
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="p-2 bg-primary/10 rounded-lg flex-shrink-0">
+                              <FolderKanban className="w-5 h-5 text-primary" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-semibold text-gray-900 truncate text-sm">
+                                {project.nom_projet}
+                              </h4>
+                              <p className="text-xs text-gray-600 truncate">{project.client}</p>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className={`inline-block px-2 py-0.5 rounded-full text-xs ${
+                                  project.statut === 'En cours' ? 'bg-green-100 text-green-800' :
+                                  project.statut === 'Brouillon' ? 'bg-orange-100 text-orange-800' :
+                                  project.statut === 'Terminé' ? 'bg-blue-100 text-blue-800' :
+                                  'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {project.statut}
+                                </span>
+                                {project.phase && (
+                                  <span className="text-xs text-blue-600">{project.phase}</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
 
               {/* Search and Filters */}
               <div className="space-y-4">
@@ -566,9 +709,6 @@ export function LibraryPage() {
                                 <span className="sr-only">Sélection</span>
                               </th>
                             )}
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Favoris
-                            </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Désignation
                           </th>
@@ -605,13 +745,6 @@ export function LibraryPage() {
                                 />
                               </td>
                             )}
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <button onClick={() => handleToggleFavorite(article.id)}>
-                                <Star
-                                  className={`w-5 h-5 ${article.is_favorite ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
-                                />
-                              </button>
-                            </td>
                             <td className="px-6 py-4">
                               <div className="flex items-center">
                                 <span className="text-sm font-medium text-gray-900">
@@ -677,9 +810,7 @@ export function LibraryPage() {
                 </Card>
               </>
             )}
-            </>
-          )}
-        </>
+          </>
       )}
 
       {/* Modals */}
@@ -689,22 +820,29 @@ export function LibraryPage() {
         onSuccess={loadLibraries}
         library={editingLibrary}
       />
+      {/* Modals */}
+      <ImportArticlesModal
+        open={importModalOpen}
+        onOpenChange={setImportModalOpen}
+        onSuccess={loadLibraries}
+      />
       {selectedLibrary && (
-        <>
-          <ImportArticlesModal
-            open={importModalOpen}
-            onOpenChange={setImportModalOpen}
-            onSuccess={() => selectedLibrary && loadArticles(selectedLibrary)}
-            libraryId={selectedLibrary}
-          />
-          <ArticleModal
-            open={articleModalOpen}
-            onOpenChange={setArticleModalOpen}
-            onSuccess={() => selectedLibrary && loadArticles(selectedLibrary)}
-            article={editingArticle}
-            libraryId={selectedLibrary}
-          />
-        </>
+        <ArticleModal
+          open={articleModalOpen}
+          onOpenChange={setArticleModalOpen}
+          onSuccess={() => selectedLibrary && loadArticles(selectedLibrary)}
+          article={editingArticle}
+          libraryId={selectedLibrary}
+        />
+      )}
+      {selectedLibrary && (
+        <AssignProjectsModal
+          open={assignProjectsModalOpen}
+          onOpenChange={setAssignProjectsModalOpen}
+          libraryId={selectedLibrary}
+          libraryName={libraries.find(l => l.id === selectedLibrary)?.nom || ''}
+          onSuccess={() => selectedLibrary && loadLibraryProjects(selectedLibrary)}
+        />
       )}
     </div>
   )

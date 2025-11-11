@@ -58,21 +58,21 @@ try {
         $fields[] = 'typologie = :typologie';
         $params[':typologie'] = $input['typologie'];
     }
+    if (isset($input['phase'])) {
+        $fields[] = 'phase = :phase';
+        $params[':phase'] = $input['phase'];
+    }
     if (isset($input['adresse'])) {
         $fields[] = 'adresse = :adresse';
         $params[':adresse'] = $input['adresse'];
     }
     if (isset($input['date_livraison_prevue'])) {
         $fields[] = 'date_livraison_prevue = :date_livraison_prevue';
-        $params[':date_livraison_prevue'] = $input['date_livraison_prevue'];
+        $params[':date_livraison_prevue'] = (!empty($input['date_livraison_prevue']) && $input['date_livraison_prevue'] !== '') ? $input['date_livraison_prevue'] : null;
     }
     if (isset($input['statut'])) {
         $fields[] = 'statut = :statut';
         $params[':statut'] = $input['statut'];
-    }
-    if (isset($input['surface_totale'])) {
-        $fields[] = 'surface_totale = :surface_totale';
-        $params[':surface_totale'] = $input['surface_totale'];
     }
 
     if (empty($fields)) {

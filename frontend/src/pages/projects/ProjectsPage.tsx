@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
-import { Plus, Search, MoreVertical, Upload, Edit, Trash2, Filter, SortAsc } from 'lucide-react'
+import { Plus, Search, MoreVertical, Upload, Edit, Trash2, Filter, SortAsc, FolderKanban } from 'lucide-react'
 import type { Project } from '@/types'
 import { ProjectModal } from '@/components/modals/ProjectModal'
 import { ImportProjectsModal } from '@/components/modals/ImportProjectsModal'
@@ -23,6 +23,7 @@ export function ProjectsPage() {
 
   // Filters
   const [statusFilter, setStatusFilter] = useState('all')
+  const [phaseFilter, setPhaseFilter] = useState('all')
   const [typologyFilter, setTypologyFilter] = useState('all')
   const [clientFilter, setClientFilter] = useState('all')
   const [yearFilter, setYearFilter] = useState('all')
@@ -71,6 +72,9 @@ export function ProjectsPage() {
       // Status filter
       const matchesStatus = statusFilter === 'all' || project.statut === statusFilter
 
+      // Phase filter
+      const matchesPhase = phaseFilter === 'all' || project.phase === phaseFilter
+
       // Typology filter
       const matchesTypology = typologyFilter === 'all' || project.typologie === typologyFilter
 
@@ -86,7 +90,7 @@ export function ProjectsPage() {
       // Archived filter
       const matchesArchived = showArchived || project.statut !== 'Archivé'
 
-      return matchesSearch && matchesStatus && matchesTypology && matchesClient && matchesYear && matchesArchived
+      return matchesSearch && matchesStatus && matchesPhase && matchesTypology && matchesClient && matchesYear && matchesArchived
     })
 
     // Sort
@@ -138,9 +142,9 @@ export function ProjectsPage() {
     }
   }
 
-  const handleViewDevis = (projectId: number) => {
-    // Naviguer vers la page de prévisualisation du devis
-    navigate({ to: `/projects/${projectId}/devis` })
+  const handleViewChiffrage = (projectId: number) => {
+    // Naviguer vers la page de prévisualisation du chiffrage
+    navigate({ to: `/projects/${projectId}/chiffrage` })
   }
 
   const getStatusColor = (status: string) => {
@@ -233,6 +237,18 @@ export function ProjectsPage() {
               <SelectItem value="En cours">En cours</SelectItem>
               <SelectItem value="Terminé">Terminé</SelectItem>
               <SelectItem value="Archivé">Archivé</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={phaseFilter} onValueChange={setPhaseFilter}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Toutes les phases" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Toutes les phases</SelectItem>
+              <SelectItem value="Esquisse">Esquisse</SelectItem>
+              <SelectItem value="Avant-projet">Avant-projet</SelectItem>
+              <SelectItem value="Avant-projet définitif">Avant-projet définitif</SelectItem>
             </SelectContent>
           </Select>
 
@@ -337,17 +353,14 @@ export function ProjectsPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {filteredAndSortedProjects.map((project) => (
-            <Card key={project.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader className="flex flex-row items-start justify-between space-y-0">
-                <div className="flex-1">
-                  <CardTitle className="text-lg">{project.nom_projet}</CardTitle>
-                  <p className="text-sm text-gray-600">{project.client}</p>
-                </div>
-                <div className="relative">
+            <Card key={project.id} className="hover:shadow-xl transition-all group relative flex flex-col h-full">
+              <CardContent className="p-6 flex flex-col items-center text-center h-full">
+                {/* Menu 3 points */}
+                <div className="absolute top-2 right-2">
                   <button
-                    className="p-2 hover:bg-gray-100 rounded-lg"
+                    className="p-2 hover:bg-gray-100 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
                     onClick={() => setMenuOpen(menuOpen === project.id ? null : project.id)}
                   >
                     <MoreVertical className="w-4 h-4 text-gray-600" />
@@ -371,42 +384,56 @@ export function ProjectsPage() {
                     </div>
                   )}
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between text-xs text-gray-500">
-                    <span>Créé le {new Date(project.created_at).toLocaleDateString('fr-FR')}</span>
-                    {project.updated_at && project.updated_at !== project.created_at && (
-                      <span className="text-xs text-gray-400">
-                        Modifié {new Date(project.updated_at).toLocaleDateString('fr-FR')}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(project.statut)}`}>
-                      {project.statut}
-                    </span>
-                    {project.typologie && (
-                      <span className="text-xs text-gray-500">{project.typologie}</span>
-                    )}
-                  </div>
-                  <div className="flex space-x-2 pt-2">
-                    <Button
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => navigate({ to: `/projects/${project.id}` })}
-                    >
-                      Ouvrir
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="flex-1"
-                      onClick={() => handleViewDevis(project.id)}
-                    >
-                      Devis
-                    </Button>
-                  </div>
+
+                {/* Icône dossier */}
+                <div className="mb-4">
+                  <FolderKanban className="w-20 h-20 text-primary" strokeWidth={1.5} />
+                </div>
+
+                {/* Nom du projet */}
+                <h3 className="font-semibold text-lg text-gray-900 mb-1">
+                  {project.nom_projet}
+                </h3>
+
+                {/* Client */}
+                <p className="text-sm text-gray-600 mb-2">{project.client}</p>
+
+                {/* Typologie et Phase avec hauteur fixe */}
+                <div className="h-10 mb-2 flex flex-col items-center justify-center gap-1">
+                  {project.typologie && (
+                    <span className="text-xs text-gray-500">{project.typologie}</span>
+                  )}
+                  {project.phase && (
+                    <span className="text-xs text-blue-600 font-medium">{project.phase}</span>
+                  )}
+                </div>
+
+                {/* Statut */}
+                <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(project.statut)} mb-4`}>
+                  {project.statut}
+                </span>
+
+                {/* Spacer pour pousser les boutons vers le bas */}
+                <div className="flex-grow"></div>
+
+                {/* Boutons d'action */}
+                <div className="flex gap-2 w-full">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => navigate({ to: `/projects/${project.id}` })}
+                  >
+                    Ouvrir
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => handleViewChiffrage(project.id)}
+                  >
+                    Exporter
+                  </Button>
                 </div>
               </CardContent>
             </Card>

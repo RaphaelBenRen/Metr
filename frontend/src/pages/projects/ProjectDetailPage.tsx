@@ -3,8 +3,9 @@ import { useNavigate, useParams } from '@tanstack/react-router'
 import { projectsApi } from '@/services/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { ArrowLeft, FileText, Download, Trash2, Upload, FileImage, FileSpreadsheet, Edit } from 'lucide-react'
-import type { Project } from '@/types'
+import { ArrowLeft, FileText, Download, Trash2, Upload, FileImage, FileSpreadsheet, Edit, Folder, Plus, X } from 'lucide-react'
+import type { Project, Library } from '@/types'
+import { AssignLibrariesModal } from '@/components/modals/AssignLibrariesModal'
 
 interface Document {
   id: number
@@ -30,8 +31,10 @@ export function ProjectDetailPage() {
 
   const [project, setProject] = useState<Project | null>(null)
   const [documents, setDocuments] = useState<Document[]>([])
+  const [libraries, setLibraries] = useState<Library[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [assignLibrariesModalOpen, setAssignLibrariesModalOpen] = useState(false)
 
   useEffect(() => {
     if (projectId) {
@@ -61,11 +64,34 @@ export function ProjectDetailPage() {
       if (docsResponse.success && docsResponse.data) {
         setDocuments(docsResponse.data)
       }
+
+      // Load libraries
+      const librariesResponse = await projectsApi.getLibraries(projectId)
+      if (librariesResponse.success && librariesResponse.data) {
+        setLibraries(librariesResponse.data)
+      }
     } catch (err) {
       console.error('Error loading project:', err)
       setError('Erreur lors du chargement du projet')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleRemoveLibrary = async (libraryId: number) => {
+    if (!projectId) return
+    if (!confirm('Êtes-vous sûr de vouloir retirer cette bibliothèque du projet ?')) return
+
+    try {
+      const response = await projectsApi.unassignLibrary(projectId, libraryId)
+      if (response.success) {
+        loadProjectData()
+      } else {
+        alert(response.error || 'Erreur lors du retrait')
+      }
+    } catch (error) {
+      console.error('Error removing library:', error)
+      alert('Erreur lors du retrait')
     }
   }
 
@@ -253,16 +279,16 @@ export function ProjectDetailPage() {
                 <p className="font-medium">{project.typologie}</p>
               </div>
             )}
+            {project.phase && (
+              <div>
+                <p className="text-sm text-gray-500">Phase</p>
+                <p className="font-medium text-blue-600">{project.phase}</p>
+              </div>
+            )}
             {project.adresse && (
               <div>
                 <p className="text-sm text-gray-500">Adresse</p>
                 <p className="font-medium">{project.adresse}</p>
-              </div>
-            )}
-            {project.surface_totale && (
-              <div>
-                <p className="text-sm text-gray-500">Surface totale</p>
-                <p className="font-medium">{project.surface_totale} m²</p>
               </div>
             )}
             {project.reference_interne && (
@@ -286,6 +312,75 @@ export function ProjectDetailPage() {
               </p>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Libraries Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Folder className="w-5 h-5" />
+              Bibliothèques assignées ({libraries.length})
+            </CardTitle>
+            <Button
+              variant="accent"
+              size="sm"
+              onClick={() => setAssignLibrariesModalOpen(true)}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Gérer les bibliothèques
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {libraries.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <Folder className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+              <p>Aucune bibliothèque assignée à ce projet</p>
+              <p className="text-sm mt-1">
+                Assignez des bibliothèques d'articles pour faciliter le chiffrage
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {libraries.map((library: any) => (
+                <div
+                  key={library.id}
+                  className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow relative group"
+                >
+                  <button
+                    className="absolute top-2 right-2 p-1 rounded-full hover:bg-red-100 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => handleRemoveLibrary(library.id)}
+                    title="Retirer cette bibliothèque"
+                  >
+                    <X className="w-4 h-4 text-red-600" />
+                  </button>
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <Folder className="w-6 h-6 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-gray-900 truncate">
+                        {library.nom}
+                      </h3>
+                      {library.description && (
+                        <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                          {library.description}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                        <span>{library.article_count || 0} articles</span>
+                        <span>
+                          Assignée le {new Date(library.assigned_at).toLocaleDateString('fr-FR')}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -418,6 +513,17 @@ export function ProjectDetailPage() {
             </p>
           </CardContent>
         </Card>
+      )}
+
+      {/* Assign Libraries Modal */}
+      {project && (
+        <AssignLibrariesModal
+          open={assignLibrariesModalOpen}
+          onOpenChange={setAssignLibrariesModalOpen}
+          projectId={projectId!}
+          projectName={project.nom_projet}
+          onSuccess={loadProjectData}
+        />
       )}
     </div>
   )
