@@ -4,7 +4,7 @@ import { projectsApi, foldersApi, statisticsApi } from '@/services/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
-import { Plus, Search, Upload, FolderPlus, Folder, ArrowLeft, MoreVertical, Edit, Trash2, FolderOpen, FileText, Move, FolderClosed } from 'lucide-react'
+import { Plus, Search, Upload, FolderPlus, Folder, ArrowLeft, MoreVertical, Edit, Trash2, FolderOpen, FileText, Move, FolderClosed, X } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import type { Project, ProjectFolder } from '@/types'
 import { ProjectModal } from '@/components/modals/ProjectModal'
@@ -94,6 +94,24 @@ export function ProjectsPage() {
     setEditingFolder(folder)
     setParentFolder(null)
     setFolderModalOpen(true)
+  }
+
+  const handleDeleteProject = async (projectId: number, projectName: string) => {
+    if (!confirm(`Êtes-vous sûr de vouloir supprimer le projet "${projectName}" ? Cette action est irréversible.`)) {
+      return
+    }
+
+    try {
+      const response = await projectsApi.deleteProject(projectId)
+      if (response.success) {
+        await loadData()
+      } else {
+        alert(response.error || 'Erreur lors de la suppression du projet')
+      }
+    } catch (error) {
+      console.error('Error deleting project:', error)
+      alert('Erreur lors de la suppression du projet')
+    }
   }
 
   const handleDeleteFolder = async (folder: ProjectFolder) => {
@@ -399,23 +417,19 @@ export function ProjectsPage() {
                         Partagé
                       </span>
                     )}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="sm" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100">
-                          <MoreVertical className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={(e) => {
+                    {/* Delete button - only show for owners */}
+                    {project.is_owner && (
+                      <button
+                        onClick={(e) => {
                           e.stopPropagation()
-                          setItemToMove({ type: 'project', id: project.id })
-                          setMoveModalOpen(true)
-                        }}>
-                          <Move className="w-4 h-4 mr-2" />
-                          Déplacer vers...
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                          handleDeleteProject(project.id, project.nom_projet)
+                        }}
+                        className="absolute top-2 right-2 p-1.5 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Supprimer le projet"
+                      >
+                        <X className="w-4 h-4 text-red-600" />
+                      </button>
+                    )}
 
                     <div className="flex justify-center mb-4">
                       <FileText className="w-20 h-20 text-primary" strokeWidth={1.5} />

@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
-import { articlesApi, librariesApi } from '@/services/api'
+import { articlesApi, librariesApi, projectsApi } from '@/services/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -530,9 +530,34 @@ export function LibraryPage() {
                       {libraryProjects.map((project: any) => (
                         <div
                           key={project.id}
-                          className="border border-gray-200 rounded-lg p-3 hover:shadow-md transition-shadow cursor-pointer"
+                          className="border border-gray-200 rounded-lg p-3 hover:shadow-md transition-shadow cursor-pointer relative group"
                           onClick={() => window.location.href = `/projects/${project.id}`}
                         >
+                          {/* Delete button to unassign library from project */}
+                          <button
+                            onClick={async (e) => {
+                              e.stopPropagation()
+                              if (!confirm(`Êtes-vous sûr de vouloir délier la bibliothèque de "${project.nom_projet}" ?`)) return
+                              try {
+                                const response = await projectsApi.unassignLibrary(project.id, selectedLibrary)
+                                console.log('Unassign response:', response)
+                                if (response.success) {
+                                  await loadLibraryProjects(selectedLibrary)
+                                } else {
+                                  console.error('API Error:', response)
+                                  alert(response.error || 'Erreur lors de la suppression')
+                                }
+                              } catch (error: any) {
+                                console.error('Error unassigning library:', error)
+                                alert('Erreur: ' + (error?.message || JSON.stringify(error)))
+                              }
+                            }}
+                            className="absolute top-2 right-2 p-1.5 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                            title="Délier la bibliothèque de ce projet"
+                          >
+                            <X className="w-4 h-4 text-red-600" />
+                          </button>
+
                           <div className="flex items-start gap-3">
                             <div className="p-2 bg-primary/10 rounded-lg flex-shrink-0">
                               <FolderKanban className="w-5 h-5 text-primary" />
